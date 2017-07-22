@@ -18,14 +18,14 @@
 			var ul = document.querySelector("ul");
 			var li = ul.children[n];
 			li.remove();
-			updateOptionNumbers(ul);
+			updateOptionNumbers(ul, n);
 		}
-		function updateOptionNumbers(ul) {
-			for (var i = 0; i < ul.children.length; i++) {
-				var li = ul.children[i]
-				li.children[0].setAttribute("name", "od"+i)
-				li.children[1].setAttribute("name", "ol"+i)
-				li.children[2].setAttribute("onclick", "deleteOption("+i+")")
+		function updateOptionNumbers(ul, from) {
+			for (var i = from; i < ul.children.length; i++) {
+				var li = ul.children[i];
+				li.children[0].setAttribute("name", "od"+i);
+				li.children[1].setAttribute("name", "ol"+i);
+				li.children[2].setAttribute("onclick", "deleteOption("+i+")");
 			}
 		}
 	</script>
