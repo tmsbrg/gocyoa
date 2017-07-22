@@ -8,7 +8,6 @@ User=gocyoa
 Group=gocyoa
 WorkingDirectory=/srv/gocyoa
 ExecStart=/srv/gocyoa/gocyoa
-ExecStop=/usr/bin/pkill gocyoa
 
 [Install]
 WantedBy=multi-user.target
