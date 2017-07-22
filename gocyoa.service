@@ -1,0 +1,14 @@
+[Unit]
+Description=Go Choose Your Own Adventure web application
+After=network.target
+
+[Service]
+Type=simple
+User=gocyoa
+Group=gocyoa
+WorkingDirectory=/srv/gocyoa
+ExecStart=/srv/gocyoa/gocyoa
+ExecStop=/usr/bin/pkill gocyoa
+
+[Install]
+WantedBy=multi-user.target
