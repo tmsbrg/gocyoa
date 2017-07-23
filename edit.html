@@ -4,45 +4,51 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <meta charset="utf-8" />
     <script type="text/javascript">
-		function addOption() {
-			var ul = document.querySelector("ul");
-			var n = ul.children.length
-			var li = document.createElement("li");
-			li.innerHTML =
-				'Description: <input type="text" name="od'+n+'" size="36" value="" />' +
-				'Link: <input type="text" name="ol'+n+'" size="8" value="" />' +
-				'<button type="button" onclick="deleteOption('+n+')">Delete</button>';
-			ul.appendChild(li);
-		}
-		function deleteOption(n) {
-			var ul = document.querySelector("ul");
-			var li = ul.children[n];
-			li.remove();
-			updateOptionNumbers(ul, n);
-		}
-		function updateOptionNumbers(ul, from) {
-			for (var i = from; i < ul.children.length; i++) {
-				var li = ul.children[i];
-				li.children[0].setAttribute("name", "od"+i);
-				li.children[1].setAttribute("name", "ol"+i);
-				li.children[2].setAttribute("onclick", "deleteOption("+i+")");
-			}
-		}
-	</script>
+function addOption() {
+    var ul = document.querySelector("ul");
+    var n = ul.children.length
+    var li = document.createElement("li");
+    li.innerHTML =
+        'Description: <input type="text" class="od" name="od'+n+'" size="36" value="" /> ' +
+        '<span class="link">Link: <input type="text" class="ol" name="ol'+n+'" size="8" value="" /></span> ' +
+        '<button type="button" class="delete" onclick="deleteOption('+n+')">Delete</button>';
+    ul.appendChild(li);
+}
+function deleteOption(n) {
+    var ul = document.querySelector("ul");
+    var li = ul.children[n];
+    li.remove();
+    updateOptionNumbers(ul, n);
+}
+function updateOptionNumbers(ul, from) {
+    for (var i = from; i < ul.children.length; i++) {
+        var li = ul.children[i];
+        li.querySelector("input.od").setAttribute("name", "od"+i);
+        li.querySelector("input.ol").setAttribute("name", "ol"+i);
+        li.querySelector("button.delete").setAttribute("onclick", "deleteOption("+i+")");
+    }
+}
+    </script>
+    <style>
+span.link {
+    display: inline-block;
+}
+    </style>
 </head><body>
-	<form action="/save/{{.Title}}" method="POST">
-	<h1>Editing {{.Title}}</h1>
+    <h1>Editing {{.Title}}</h1>
+    <form action="/save/{{.Title}}" method="POST">
     <textarea name="description" cols="40" rows="5">{{.Description}}</textarea>
+    <p><button type="button" onclick="addOption()">Add option</button></p>
     <ul>
     {{range $index, $option := .Options}}
-		<li>
-			Description: <input type="text" name="od{{$index}}" size="36" value="{{$option.Description}}" />
-			Link: <input type="text" name="ol{{$index}}" size="8" value="{{$option.Link}}" />
-			<button type="button" onclick="deleteOption({{$index}})">Delete</button>
-		</li>
+        <li>
+            Description: <input type="text" class="od" name="od{{$index}}" size="36" value="{{$option.Description}}" />
+            <span class="link">Link: <input type="text" class="ol" name="ol{{$index}}" size="8" value="{{$option.Link}}" /></span>
+            <button type="button" class="delete" onclick="deleteOption({{$index}})">Delete</button>
+        </li>
     {{end}}
     </ul>
-    <p><button type="button" onclick="addOption()">Add option</button></p>
-	<input type="submit" value="Save" />
-	</form>
+    <input type="submit" value="Save" />
+    </form>
+    <a href="/play/{{.Title}}">Return without saving</a>
 </body></html>
