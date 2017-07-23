@@ -50,5 +50,8 @@ span.link {
     </ul>
     <input type="submit" value="Save" />
     </form>
+    <form action="/delete/{{.Title}}" method="POST">
+    <input type="submit" value="Delete scene" />
+    </form>
     <a href="/play/{{.Title}}">Return without saving</a>
 </body></html>

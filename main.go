@@ -21,16 +21,20 @@ type Scene struct {
 
 type Game map[string]*Scene
 
-func (g *Game) UpdateScene(s *Scene) {
-	(*g)[s.Title] = s
+func (g Game) UpdateScene(s *Scene) {
+	g[s.Title] = s
 }
 
-func (g *Game) GetScene(title string) (s *Scene, exists bool) {
-	s, exists = ((*g)[title])
+func (g Game) DeleteScene(title string) {
+	delete(g, title)
+}
+
+func (g Game) GetScene(title string) (s *Scene, exists bool) {
+	s, exists = (g[title])
 	return
 }
 
-func InitGame() *Game {
+func InitGame() Game {
 	var game Game
 	game = make(map[string]*Scene)
 	game.UpdateScene(&Scene{"",
@@ -123,7 +127,7 @@ func InitGame() *Game {
 			Option{"Go straight for the store.", "biketown"},
 			Option{"Take the longer route.", "bikefield"},
 		}})
-	return &game
+	return game
 }
 
 func main() {
@@ -162,7 +166,6 @@ func main() {
 	})
 
 	http.HandleFunc("/save/", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Add("Content-Type", "text/html; charset=utf-8")
 		w.Header().Add("Cache-Control", "no-cache")
 		title := r.URL.Path[len("/save/"):]
 
@@ -187,6 +190,18 @@ func main() {
 			log.Printf("Created scene \"%s\".\n", title)
 		}
 		http.Redirect(w, r, "/play/"+title, http.StatusFound)
+	})
+
+	http.HandleFunc("/delete/", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Add("Cache-Control", "no-cache")
+		title := r.URL.Path[len("/delete/"):]
+
+		_, exists := game.GetScene(title)
+		if exists {
+			game.DeleteScene(title)
+			log.Printf("Deleted scene \"%s\".\n", title)
+		}
+		http.Redirect(w, r, "/play/", http.StatusFound)
 	})
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
