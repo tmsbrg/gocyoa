@@ -1,11 +1,16 @@
 package main
 
 import (
+	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"html/template"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
+	"regexp"
 )
 
 type Option struct {
@@ -131,12 +136,36 @@ func InitGame() Game {
 }
 
 func main() {
+	// example way to run program with required environment variables for testing:
+	// GOCYOA_PW_SEED="xyzzy_" GOCYOA_PW_HASH="$(echo -n xyzzy_wowverygoodpassword | sha256sum | cut -d' ' -f1)" gocyoa
+
+	// seed for passwords
+	password_seed := os.Getenv("GOCYOA_PW_SEED")
+	if len(password_seed) == 0 {
+		log.Fatal("Error: Missing password seed from environment (set GOCYOA_PW_SEED)")
+	}
+	// sha256 password hash for admin
+	password_hash_str := os.Getenv("GOCYOA_PW_HASH")
+	if len(password_hash_str) == 0 {
+		log.Fatal("Error: Missing password hash from environment (set GOCYOA_PW_HASH)")
+	}
+	password_hash, err := hex.DecodeString(password_hash_str)
+	if err != nil {
+		log.Fatal("Error: GOCYOA_PW_HASH is not valid hexadecimal ")
+	}
+
+	alphanum_regex := regexp.MustCompile("^[0-9A-Za-z]*$")
+
 	game := InitGame()
 
 	playTemplate := template.Must(template.ParseFiles("play.html"))
 	editTemplate := template.Must(template.ParseFiles("edit.html"))
 	notFoundTemplate := template.Must(template.ParseFiles("404.html"))
 	homePage, err := ioutil.ReadFile("index.html")
+	if err != nil {
+		panic(err)
+	}
+	loginPage, err := ioutil.ReadFile("login.html")
 	if err != nil {
 		panic(err)
 	}
@@ -202,6 +231,38 @@ func main() {
 			log.Printf("Deleted scene \"%s\".\n", title)
 		}
 		http.Redirect(w, r, "/play/", http.StatusFound)
+	})
+
+	http.HandleFunc("/login/", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Add("Cache-Control", "no-cache")
+		if r.Method == "POST" {
+			username := r.FormValue("username")
+			if !alphanum_regex.MatchString(username) {
+				// protect against log forging when printing username in logs
+				log.Println("Login failed: Username rejected (not alphanumeric)")
+			} else if username == "admin" {
+				given_password_hash := sha256.Sum256([]byte(password_seed + r.FormValue("password")))
+				if bytes.Equal(given_password_hash[:], password_hash) {
+					log.Println("Login success!")
+					w.Write([]byte("success!"))
+					return
+				} else {
+					log.Println("Login failed: Bad password for admin")
+				}
+			} else if username == "" {
+				log.Println("Login failed: No username given")
+			} else {
+				log.Printf("Login failed: Unknown username %s\n", username)
+			}
+		}
+
+		title := r.URL.Path[len("/login/"):]
+		if len(title) == 0 {
+			w.Write(loginPage)
+		} else {
+			w.WriteHeader(404)
+			w.Write([]byte("not found"))
+		}
 	})
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
