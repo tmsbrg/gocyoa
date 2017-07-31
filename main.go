@@ -2,10 +2,8 @@ package main
 
 import (
 	"bytes"
-	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"html/template"
 	"io/ioutil"
@@ -13,10 +11,7 @@ import (
 	"net/http"
 	"os"
 	"regexp"
-	"time"
 )
-
-const sessionTimeoutMinutes = 30
 
 type Option struct {
 	Description string
@@ -42,41 +37,6 @@ func (g Game) DeleteScene(title string) {
 func (g Game) GetScene(title string) (s *Scene, exists bool) {
 	s, exists = (g[title])
 	return
-}
-
-func MakeSession(w http.ResponseWriter, sessions map[string]time.Time) error {
-	id := make([]byte, 32, 32)
-	_, err := rand.Read(id)
-	if err != nil {
-		return errors.New(fmt.Sprintf("Cannot generate random numbers for session id: %s", err))
-	}
-	idString := hex.EncodeToString(id)
-	http.SetCookie(w, &http.Cookie{Name: "session", Value: idString, MaxAge: sessionTimeoutMinutes*60, HttpOnly: true, Path: "/"})
-	sessions[idString] = time.Now().Add(time.Duration(sessionTimeoutMinutes)*time.Minute)
-	log.Printf("Created session, id: %s\n", idString)
-	return nil
-}
-
-func isLoggedIn(r *http.Request, sessions map[string]time.Time) bool {
-	cookie, err := r.Cookie("session")
-	if err != nil {
-		log.Println("Missing session cookie")
-		return false
-	}
-	id := cookie.Value
-	expirationTime, exists := sessions[id]
-	if !exists {
-		log.Println("Given session does not exist")
-		return false
-	}
-	stillValid := time.Now().Before(expirationTime)
-	if !stillValid {
-		log.Printf("Session expired: %s\n", id)
-		delete(sessions, id)
-		return false
-	}
-	log.Printf("Valid session: %s\n", id)
-	return true
 }
 
 func InitGame() Game {
@@ -194,7 +154,7 @@ func main() {
 		log.Fatal("Error: GOCYOA_PW_HASH is not valid hexadecimal ")
 	}
 
-	sessions := make(map[string]time.Time)
+	sessions := InitSessionState()
 
 	alphanum_regex := regexp.MustCompile("^[0-9A-Za-z]*$")
 
@@ -227,7 +187,7 @@ func main() {
 
 	http.HandleFunc("/edit/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Cache-Control", "no-cache")
-		if !isLoggedIn(r, sessions) {
+		if !sessions.isLoggedIn(r) {
 			http.Redirect(w, r, "/login/", http.StatusFound)
 			return
 		}
@@ -242,7 +202,7 @@ func main() {
 
 	http.HandleFunc("/save/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Cache-Control", "no-cache")
-		if !isLoggedIn(r, sessions) {
+		if !sessions.isLoggedIn(r) {
 			http.Redirect(w, r, "/login/", http.StatusFound)
 			return
 		}
@@ -273,7 +233,7 @@ func main() {
 
 	http.HandleFunc("/delete/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Cache-Control", "no-cache")
-		if !isLoggedIn(r, sessions) {
+		if !sessions.isLoggedIn(r) {
 			http.Redirect(w, r, "/login/", http.StatusFound)
 			return
 		}
@@ -298,7 +258,7 @@ func main() {
 				given_password_hash := sha256.Sum256([]byte(password_seed + r.FormValue("password")))
 				if bytes.Equal(given_password_hash[:], password_hash) {
 					log.Println("Login success!")
-					MakeSession(w, sessions)
+					sessions.Make(w)
 					w.Write([]byte("success!"))
 					return
 				} else {
