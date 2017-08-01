@@ -187,7 +187,7 @@ func main() {
 
 	http.HandleFunc("/edit/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Cache-Control", "no-cache")
-		if !sessions.isLoggedIn(r) {
+		if !sessions.IsLoggedIn(r) {
 			http.Redirect(w, r, "/login/", http.StatusFound)
 			return
 		}
@@ -202,7 +202,7 @@ func main() {
 
 	http.HandleFunc("/save/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Cache-Control", "no-cache")
-		if !sessions.isLoggedIn(r) {
+		if !sessions.IsLoggedIn(r) {
 			http.Redirect(w, r, "/login/", http.StatusFound)
 			return
 		}
@@ -233,7 +233,7 @@ func main() {
 
 	http.HandleFunc("/delete/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Cache-Control", "no-cache")
-		if !sessions.isLoggedIn(r) {
+		if !sessions.IsLoggedIn(r) {
 			http.Redirect(w, r, "/login/", http.StatusFound)
 			return
 		}
@@ -278,6 +278,12 @@ func main() {
 			w.WriteHeader(404)
 			w.Write([]byte("not found"))
 		}
+	})
+
+	http.HandleFunc("/logout/", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Add("Cache-Control", "no-cache")
+		sessions.Delete(w, r)
+		http.Redirect(w, r, "/", http.StatusFound)
 	})
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {

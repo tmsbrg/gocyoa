@@ -14,14 +14,14 @@ import (
 const sessionTimeoutMinutes = 30
 
 type SessionState struct {
-	lock sync.Mutex
+	lock     sync.Mutex
 	sessions map[string]time.Time
 }
 
 func InitSessionState() (s SessionState) {
-	 s.sessions = make(map[string]time.Time)
-	 go s.gc()
-	 return
+	s.sessions = make(map[string]time.Time)
+	go s.gc()
+	return
 }
 
 func (s SessionState) Make(w http.ResponseWriter) error {
@@ -31,15 +31,27 @@ func (s SessionState) Make(w http.ResponseWriter) error {
 		return errors.New(fmt.Sprintf("Cannot generate random numbers for session id: %s", err))
 	}
 	idString := hex.EncodeToString(id)
-	http.SetCookie(w, &http.Cookie{Name: "session", Value: idString, MaxAge: sessionTimeoutMinutes*60, HttpOnly: true, Path: "/"})
+	http.SetCookie(w, &http.Cookie{Name: "session", Value: idString, MaxAge: sessionTimeoutMinutes * 60, HttpOnly: true, Path: "/"})
 	s.lock.Lock()
-	s.sessions[idString] = time.Now().Add(time.Duration(sessionTimeoutMinutes)*time.Minute)
+	s.sessions[idString] = time.Now().Add(time.Duration(sessionTimeoutMinutes) * time.Minute)
 	s.lock.Unlock()
 	log.Printf("Created session, id: %s\n", idString)
 	return nil
 }
 
-func (s SessionState) isLoggedIn(r *http.Request) bool {
+func (s SessionState) Delete(w http.ResponseWriter, r *http.Request) {
+	cookie, err := r.Cookie("session")
+	if err != nil {
+		return
+	}
+	http.SetCookie(w, &http.Cookie{Name: "session", Value: "", MaxAge: 0, HttpOnly: true, Path: "/"})
+	id := cookie.Value
+	s.lock.Lock()
+	delete(s.sessions, id)
+	s.lock.Unlock()
+}
+
+func (s SessionState) IsLoggedIn(r *http.Request) bool {
 	cookie, err := r.Cookie("session")
 	if err != nil {
 		log.Println("Missing session cookie")
@@ -65,7 +77,7 @@ func (s SessionState) isLoggedIn(r *http.Request) bool {
 
 func (s SessionState) gc() {
 	for {
-		time.Sleep(time.Duration(sessionTimeoutMinutes)*time.Minute)
+		time.Sleep(time.Duration(sessionTimeoutMinutes) * time.Minute)
 		now := time.Now()
 		s.lock.Lock()
 		for session, expirationTime := range s.sessions {
